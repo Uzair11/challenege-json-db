@@ -6,6 +6,8 @@ module.exports = {
   deleteStudentRecord
 }
 
+const recordHelpers = require('./helpers')
+
 const directory = './public'
 
 async function getHealth (req, res, next) {
@@ -26,8 +28,8 @@ async function updateRecord (req, res, next) {
       fs.readFile(file, 'utf8', function (err, contents) {
         if (err) throw err
         studentRecord = contents ? JSON.parse(contents) : {}
-        studentRecord = updateJson(studentRecord, properties, value)
-        writeFile(file, studentRecord)
+        studentRecord = recordHelpers.updateJson(studentRecord, properties, value)
+        recordHelpers.writeFile(file, studentRecord)
         return res.json({ success: true })
       })
     } else {
@@ -37,9 +39,9 @@ async function updateRecord (req, res, next) {
         properties.reduce((prev, curr) => (
           prev[curr] = {}
         ), studentRecord)
-        studentRecord = updateJson(studentRecord, properties, value)
+        studentRecord = recordHelpers.updateJson(studentRecord, properties, value)
       }
-      writeFile(file, studentRecord)
+      recordHelpers.writeFile(file, studentRecord)
       return res.json({ success: true })
     }
   } catch (err) {
@@ -62,7 +64,7 @@ async function getStudentRecord (req, res, next) {
         if (properties.length === 0) {
           return res.json({ studentRecord })
         } else {
-          studentRecord = getRecord(studentRecord, properties)
+          studentRecord = recordHelpers.getRecord(studentRecord, properties)
           if (studentRecord) {
             return res.json({ studentRecord })
           } else {
@@ -87,84 +89,19 @@ async function deleteStudentRecord (req, res, next) {
       if (!err) {
         student = contents ? JSON.parse(contents) : {}
         if (properties.length === 0) {
-          writeFile(file, {})
+          recordHelpers.writeFile(file, {})
           return res.status(200).json({ status: true })
         } else {
-          let studentRecord = deleteRecord(student, properties)
+          let studentRecord = recordHelpers.deleteRecord(student, properties)
           if (!studentRecord) {
             return res.status(404).json({ error: 'record not found' })
           }
-          writeFile(file, studentRecord)
+          recordHelpers.writeFile(file, studentRecord)
           return res.status(200).json({ studentRecord })
         }
       }
     })
   } else {
     return res.status(404).json({ error: 'file not found' })
-  }
-}
-
-function writeFile (file, obj) {
-  fs.writeFile(file, JSON.stringify(obj), function (err) {
-    if (err) throw err
-  })
-}
-
-function updateJson (studentRecord, properties, value) {
-  const studentRecordCopy = studentRecord
-  if (properties.length === 0) {
-    studentRecord = mergeObjects(studentRecord, value)
-    return studentRecord
-  }
-  for (let i = 0; i < properties.length; i++) {
-    if (studentRecord.hasOwnProperty(properties[i])) {
-      studentRecord = studentRecord[properties[i]]
-      if (i === properties.length - 1) {
-        studentRecord = mergeObjects(studentRecord, value)
-        return studentRecordCopy
-      }
-    } else {
-      for (i; i < properties.length; i++) {
-        studentRecord[properties[i]] = {}
-        studentRecord = studentRecord[properties[i]]
-      }
-      studentRecord = mergeObjects(studentRecord, value)
-      return studentRecordCopy
-    }
-  }
-}
-
-function mergeObjects (obj1, obj2) {
-  for (const attrname in obj2) { obj1[attrname] = obj2[attrname] }
-  return obj1
-}
-
-function getRecord (studentRecord, properties) {
-  for (let i = 0; i < properties.length; i++) {
-    if (studentRecord.hasOwnProperty(properties[i])) {
-      if (i === properties.length - 1) {
-        return studentRecord || {}
-      } else {
-        studentRecord = studentRecord[properties[i]]
-      }
-    } else {
-      return false
-    }
-  }
-}
-
-function deleteRecord (studentRecord, properties) {
-  const studentRecordCopy = studentRecord
-  for (let i = 0; i < properties.length; i++) {
-    if (studentRecord.hasOwnProperty(properties[i])) {
-      if (i === properties.length - 1) {
-        delete studentRecord[properties[i]]
-        return studentRecordCopy
-      } else {
-        studentRecord = studentRecord[properties[i]]
-      }
-    } else {
-      return false
-    }
   }
 }
